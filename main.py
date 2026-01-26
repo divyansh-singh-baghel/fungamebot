@@ -9,7 +9,7 @@ from telegram.ext import (
 )
 import random
 
-TOKEN = "YOUR_BOT_TOKEN_HERE"
+TOKEN = "8581059074:AAHBAcRNQGcrt2WQhFjaB0PASccX5GOvrVM"
 
 app = Flask(__name__)
 bot = Bot(token=TOKEN)
