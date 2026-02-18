@@ -1,5 +1,6 @@
-from flask import Flask, request
-from telegram import Update, Bot
+
+from flask import Flask
+from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -7,69 +8,59 @@ from telegram.ext import (
     ContextTypes,
     filters
 )
+import threading
 import random
 
+# 🔴 Apna REAL token daalna
 TOKEN = "8581059074:AAHBAcRNQGcrt2WQhFjaB0PASccX5GOvrVM"
 
 app = Flask(__name__)
-bot = Bot(token=TOKEN)
-application = ApplicationBuilder().token(TOKEN).build()
 
-# ----- WORD LIST (5 LETTER WORDS) -----
+# ----- WORD LIST -----
 WORDS = ["luffy", "narut", "zorro", "apple", "stone", "tiger"]
 
 # ---------- COMMANDS ----------
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Hey! Main fun gaming bot hoon 😄\n\n"
+        "👋 Hey! Main Fun Gaming Bot hoon 😄\n\n"
         "🎲 Number Game → /game\n"
-        "🧩 Guess the Word → /wordgame\n"
-        "💬 Ya normal chat bhi kar sakte ho"
+        "🧩 Guess the Word → /wordgame"
     )
 
 # ----- NUMBER GAME -----
 async def game(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    number = random.randint(1, 10)
-    context.user_data["number"] = number
+    context.user_data["number"] = random.randint(1, 10)
     context.user_data.pop("word", None)
-    await update.message.reply_text(
-        "🎲 Maine 1–10 ke beech ek number socha hai.\nGuess karo 👀"
-    )
+    await update.message.reply_text("🎲 Guess number between 1–10")
 
 # ----- WORD GAME -----
 async def wordgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    word = random.choice(WORDS)
-    context.user_data["word"] = word
+    context.user_data["word"] = random.choice(WORDS)
     context.user_data.pop("number", None)
-    await update.message.reply_text(
-        "🧩 Guess the 5-letter WORD!\n"
-        "Example: luffy\n\nType your guess 👇"
-    )
+    await update.message.reply_text("🧩 Guess the 5-letter word")
 
 # ---------- MESSAGE HANDLER ----------
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.lower()
 
-    # 🎲 Number Game Logic
+    # 🎲 Number Game
     if "number" in context.user_data:
         try:
             guess = int(text)
             correct = context.user_data["number"]
 
             if guess == correct:
-                await update.message.reply_text(
-                    f"🔥 Sahi jawab! Number tha {correct} 😎"
-                )
+                await update.message.reply_text(f"🔥 Sahi jawab! Number tha {correct}")
                 del context.user_data["number"]
             else:
-                await update.message.reply_text("❌ Galat 😅 dobara try karo")
+                await update.message.reply_text("❌ Galat, dobara try karo")
         except:
             await update.message.reply_text("👀 Sirf number bhejo (1–10)")
         return
 
-    # 🧩 Word Game Logic
+    # 🧩 Word Game
     if "word" in context.user_data:
         word = context.user_data["word"]
 
@@ -87,44 +78,36 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 result += f"❌ {text[i]}  "
 
         if text == word:
-            await update.message.reply_text(
-                f"🎉 Jeet gaye bhai! Word tha **{word}** 🔥"
-            )
+            await update.message.reply_text(f"🎉 Jeet gaye! Word tha {word}")
             del context.user_data["word"]
         else:
-            await update.message.reply_text(
-                f"Result:\n{result}\n\nTry again 👀"
-            )
+            await update.message.reply_text(f"Result:\n{result}\n\nTry again 👀")
         return
 
     # 💬 Normal Chat
-    replies = [
-        "😄 Haha",
-        "🎮 Game khelna hai? /game ya /wordgame",
-        "🤖 Main yahin hoon",
-        "🔥 Mast!",
-        "👋 Hello ji"
-    ]
-    await update.message.reply_text(random.choice(replies))
+    await update.message.reply_text("🎮 Game khelna hai? /game ya /wordgame")
 
+# ---------- RUN TELEGRAM BOT ----------
 
-# ---------- WEBHOOK ----------
+def run_bot():
+    application = ApplicationBuilder().token(TOKEN).build()
 
-@app.route("/webhook", methods=["POST"])
-async def webhook():
-    update = Update.de_json(request.get_json(force=True), bot)
-    await application.process_update(update)
-    return "ok"
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(CommandHandler("game", game))
+    application.add_handler(CommandHandler("wordgame", wordgame))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+
+    print("🔥 Bot started successfully!")
+    application.run_polling()
+
+# ---------- Flask route (Render ke liye) ----------
 
 @app.route("/")
 def home():
-    return "Bot is running 🚀"
+    return "Bot is running 24/7 🚀"
 
-# ---------- HANDLERS ----------
-application.add_handler(CommandHandler("start", start))
-application.add_handler(CommandHandler("game", game))
-application.add_handler(CommandHandler("wordgame", wordgame))
-application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+# ---------- MAIN ----------
 
 if __name__ == "__main__":
+    threading.Thread(target=run_bot).start()
     app.run(host="0.0.0.0", port=10000)
