@@ -1,4 +1,6 @@
-
+import os
+import random
+import asyncio
 from flask import Flask
 from telegram import Update
 from telegram.ext import (
@@ -8,88 +10,54 @@ from telegram.ext import (
     ContextTypes,
     filters
 )
-import threading
-import random
 
-# 🔴 Apna REAL token daalna
-TOKEN = "8468919369:AAEP_lwa3b2wq-l-W-ahD_COAodRvr9b3iI"
+TOKEN = os.getenv("BOT_TOKEN")
+
+if not TOKEN:
+    raise ValueError("BOT_TOKEN not set in environment variables")
 
 app = Flask(__name__)
 
-# ----- WORD LIST -----
 WORDS = ["luffy", "narut", "zorro", "apple", "stone", "tiger"]
 
-# ---------- COMMANDS ----------
+# -------- COMMANDS --------
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "👋 Hey! Main Fun Gaming Bot hoon 😄\n\n"
-        "🎲 Number Game → /game\n"
-        "🧩 Guess the Word → /wordgame"
+        "👋 Hey! Fun Gaming Bot 😄\n\n"
+        "🎲 /game\n"
+        "🧩 /wordgame"
     )
 
-# ----- NUMBER GAME -----
 async def game(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["number"] = random.randint(1, 10)
-    context.user_data.pop("word", None)
-    await update.message.reply_text("🎲 Guess number between 1–10")
+    await update.message.reply_text("🎲 Guess number 1–10")
 
-# ----- WORD GAME -----
 async def wordgame(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data["word"] = random.choice(WORDS)
-    context.user_data.pop("number", None)
-    await update.message.reply_text("🧩 Guess the 5-letter word")
-
-# ---------- MESSAGE HANDLER ----------
+    await update.message.reply_text("🧩 Guess 5-letter word")
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.lower()
 
-    # 🎲 Number Game
     if "number" in context.user_data:
         try:
             guess = int(text)
             correct = context.user_data["number"]
-
             if guess == correct:
-                await update.message.reply_text(f"🔥 Sahi jawab! Number tha {correct}")
+                await update.message.reply_text("🔥 Correct!")
                 del context.user_data["number"]
             else:
-                await update.message.reply_text("❌ Galat, dobara try karo")
+                await update.message.reply_text("❌ Try again")
         except:
-            await update.message.reply_text("👀 Sirf number bhejo (1–10)")
+            await update.message.reply_text("Send number only")
         return
 
-    # 🧩 Word Game
-    if "word" in context.user_data:
-        word = context.user_data["word"]
+    await update.message.reply_text("Use /game or /wordgame")
 
-        if len(text) != 5:
-            await update.message.reply_text("⚠️ Sirf 5-letter word likho")
-            return
+# -------- TELEGRAM BOT --------
 
-        result = ""
-        for i in range(5):
-            if text[i] == word[i]:
-                result += f"✅ {text[i]}  "
-            elif text[i] in word:
-                result += f"⚠️ {text[i]}  "
-            else:
-                result += f"❌ {text[i]}  "
-
-        if text == word:
-            await update.message.reply_text(f"🎉 Jeet gaye! Word tha {word}")
-            del context.user_data["word"]
-        else:
-            await update.message.reply_text(f"Result:\n{result}\n\nTry again 👀")
-        return
-
-    # 💬 Normal Chat
-    await update.message.reply_text("🎮 Game khelna hai? /game ya /wordgame")
-
-# ---------- RUN TELEGRAM BOT ----------
-
-def run_bot():
+async def run_bot():
     application = ApplicationBuilder().token(TOKEN).build()
 
     application.add_handler(CommandHandler("start", start))
@@ -97,17 +65,18 @@ def run_bot():
     application.add_handler(CommandHandler("wordgame", wordgame))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 
-    print("🔥 Bot started successfully!")
-    application.run_polling()
+    print("🔥 Bot Started Successfully!")
+    await application.run_polling()
 
-# ---------- Flask route (Render ke liye) ----------
+# -------- FLASK ROUTE --------
 
 @app.route("/")
 def home():
-    return "Bot is running 24/7 🚀"
+    return "Bot Running 🚀"
 
-# ---------- MAIN ----------
+# -------- MAIN --------
 
 if __name__ == "__main__":
-    threading.Thread(target=run_bot).start()
+    loop = asyncio.get_event_loop()
+    loop.create_task(run_bot())
     app.run(host="0.0.0.0", port=10000)
