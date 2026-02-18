@@ -12,7 +12,7 @@ import threading
 import random
 
 # 🔴 Apna REAL token daalna
-TOKEN = "8581059074:AAHBAcRNQGcrt2WQhFjaB0PASccX5GOvrVM"
+TOKEN = "8468919369:AAEP_lwa3b2wq-l-W-ahD_COAodRvr9b3iI"
 
 app = Flask(__name__)
 
